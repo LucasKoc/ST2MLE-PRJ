@@ -31,6 +31,18 @@ class ScrappingLetudiant:
         self.url_ranking_page = (
             "https://www.letudiant.fr/classements/classement-des-ecoles-d-ingenieurs.html"
         )
+        self.false_positive = {}
+
+    def load_false_positive(self, path: str) -> None:
+        """
+        Load false positive URLs from a CSV file.
+        Format: {'name': 'url'}
+        :param path: Path to the CSV file containing false positive URLs.
+        """
+        with open(path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                self.false_positive[row["name"]] = row["url"]
 
     def extract_rows(self, html: str, session: requests.Session) -> list[tuple[str, str]]:
         """
@@ -45,11 +57,10 @@ class ScrappingLetudiant:
             "a", href=True, string=lambda t: t and "fiche complète" in t.lower()
         ):
             url = urldefrag(urljoin(BASE, btn["href"])).url
-            name = btn.find_previous("h3").get_text(" ", strip=True)  # le <h3> de la carte
-            # Si déjà /etablissement/… on garde tel quel
+            name = btn.find_previous("h3").get_text(" ", strip=True)
             if "/etudes/annuaire-enseignement-superieur/etablissement/" not in url:
                 mapped = self.annuaire_url_from_name(name, session)
-                url = mapped or url  # fallback : conserve l'URL réseau si rien trouvé
+                url = mapped or url
             rows.append((name, url))
         return rows
 
@@ -73,8 +84,7 @@ class ScrappingLetudiant:
 
         return all_rows
 
-    @staticmethod
-    def annuaire_url_from_name(name: str, session: requests.Session) -> str | None:
+    def annuaire_url_from_name(self, name: str, session: requests.Session) -> str | None:
         """
         Extracts the URL of the school from the name using the annuaire search.
         We point search to - https://www.letudiant.fr/etudes/annuaire-enseignement-superieur/etablissement/critere-<school_name>.html
@@ -84,6 +94,8 @@ class ScrappingLetudiant:
         :param session: Requests session to use for the search.
         :return: URL of the school if found, otherwise None.
         """
+        if name in self.false_positive:
+            return self.false_positive[name]
         name_clean = name.lower().split("-")[0].strip()
         url = SEARCH.format(query=quote_plus(name_clean))
         html = session.get(url, headers=HEADERS, timeout=10).text
@@ -102,6 +114,7 @@ class ScrappingLetudiant:
 
 if __name__ == "__main__":
     scrapping = ScrappingLetudiant()
+    scrapping.load_false_positive("false_positive.csv")
     rows = scrapping.extract_ranking_page()
 
     schools = pd.DataFrame([row[1] for row in rows], columns=["url"])
