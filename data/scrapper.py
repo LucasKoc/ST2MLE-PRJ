@@ -1,12 +1,14 @@
+import csv
+
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-ecoles = [
-    "https://www.letudiant.fr/etudes/annuaire-enseignement-superieur/etablissement/etablissement-hetic-la-grande-ecole-du-web-7868.html",
-    "https://www.letudiant.fr/etudes/annuaire-enseignement-superieur/etablissement/etablissement-ecole-d-ingenieurs-du-monde-numerique-9712.html",
-    "https://www.letudiant.fr/etudes/annuaire-enseignement-superieur/etablissement/etablissement-ecole-d-ingenieurs-du-cesi-centre-de-rouen-mont-saint-aignan-70411.html",
-]
+ecoles = []
+with open("liens_fiches_ecoles.csv", "r", encoding="utf-8") as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        ecoles.append(row["url"])
 
 headers = {"User-Agent": "Mozilla/5.0"}
 
