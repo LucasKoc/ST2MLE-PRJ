@@ -4,6 +4,7 @@ File to preprocess the data.
 
 import pandas as pd
 
+
 class PreprocessData:
     def __init__(self, file_path):
         """
@@ -27,7 +28,9 @@ class PreprocessData:
         :param output_path: Path where the CSV file will be saved.
         """
         assert self.data is not None, "Data not loaded. Please load the data first."
-        assert output_path is not None, "Output path not loaded. Please load the data first."
+        assert (
+            output_path is not None
+        ), "Output path not loaded. Please load the data first."
 
         self.data.to_csv(output_path, index=False)
 
@@ -40,7 +43,6 @@ class PreprocessData:
         assert self.data is not None, "Data not loaded. Please load the data first."
 
         return self.data
-
 
     def check_missing_values(self) -> pd.DataFrame:
         """
@@ -62,7 +64,7 @@ class PreprocessData:
 
         return self.data.duplicated().sum()
 
-    def fill_missing_values(self, method='mean') -> None:
+    def fill_missing_values(self, method="mean") -> None:
         """
         Fill missing values in the data.
 
@@ -70,8 +72,11 @@ class PreprocessData:
         """
         assert self.data is not None, "Data not loaded. Please load the data first."
 
-        self.data = self.data.fillna(self.data.mean() if method == 'mean' else
-                                    self.data.median() if method == 'median' else self.data)
+        self.data = self.data.fillna(
+            self.data.mean()
+            if method == "mean"
+            else self.data.median() if method == "median" else self.data
+        )
 
     def drop_duplicates(self) -> None:
         """
@@ -80,4 +85,3 @@ class PreprocessData:
         assert self.data is not None, "Data not loaded. Please load the data first."
 
         self.data = self.data.drop_duplicates()
-
