@@ -3,7 +3,7 @@ File to scrape data from a website and save it to a CSV file.
 """
 import requests, time
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urldefrag
 
 BASE = "https://www.letudiant.fr"
 RANKING = f"{BASE}/classements/classement-des-ecoles-d-ingenieurs.html"
@@ -22,7 +22,7 @@ class ScrappingLetudiant:
     def extract_links(self, html: str) -> set[str]:
         soup = BeautifulSoup(html, "lxml")
         links = {
-            urljoin(BASE, a["href"])
+            urldefrag(urljoin(BASE, a["href"])).url
             for a in soup.find_all("a", href=True)
             if a.get_text(strip=True) == "Voir la fiche complète"
         }
@@ -40,7 +40,6 @@ class ScrappingLetudiant:
             extracted_links = self.extract_links(html)
             all_links |= extracted_links
             print(f"Page {page} -> {len(all_links)} liens uniques (+{len(extracted_links)})")
-            time.sleep(1)
 
         print(f"Total final : {len(all_links)} liens")
         with open("liens_fiches_ecoles.csv", "w", encoding="utf-8") as f:
