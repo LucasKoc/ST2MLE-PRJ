@@ -28,9 +28,7 @@ class PreprocessData:
         :param output_path: Path where the CSV file will be saved.
         """
         assert self.data is not None, "Data not loaded. Please load the data first."
-        assert (
-            output_path is not None
-        ), "Output path not loaded. Please load the data first."
+        assert output_path is not None, "Output path not loaded. Please load the data first."
 
         self.data.to_csv(output_path, index=False)
 

@@ -1,6 +1,6 @@
+import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 
 ecoles = [
     "https://www.letudiant.fr/etudes/annuaire-enseignement-superieur/etablissement/etablissement-hetic-la-grande-ecole-du-web-7868.html",
@@ -8,9 +8,7 @@ ecoles = [
     "https://www.letudiant.fr/etudes/annuaire-enseignement-superieur/etablissement/etablissement-ecole-d-ingenieurs-du-cesi-centre-de-rouen-mont-saint-aignan-70411.html",
 ]
 
-headers = {
-    "User-Agent": "Mozilla/5.0"
-}
+headers = {"User-Agent": "Mozilla/5.0"}
 
 avis_list = []
 
@@ -21,7 +19,10 @@ for base_url in ecoles:
         response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        avis_divs = soup.find_all("div", class_="tw-w-full tw-mb-2 tw-border-solid tw-border tw-border-gray-500 tw-rounded-large")
+        avis_divs = soup.find_all(
+            "div",
+            class_="tw-w-full tw-mb-2 tw-border-solid tw-border tw-border-gray-500 tw-rounded-large",
+        )
 
         if not avis_divs:
             break
@@ -41,17 +42,19 @@ for base_url in ecoles:
 
             contenu_p = avis.select_one("p.tw-break-words")
             contenu = contenu_p.get_text(strip=True) if contenu_p else ""
-            
+
             ecole = base_url.split("/")[-1].replace(".html", "").replace("-", " ").title()
 
-            avis_list.append({
-                'ecole': ecole,
-                "auteur": auteur,
-                "date": date,
-                "note": note,
-                "contenu": contenu,
-                "url": base_url,  
-            })
+            avis_list.append(
+                {
+                    'ecole': ecole,
+                    "auteur": auteur,
+                    "date": date,
+                    "note": note,
+                    "contenu": contenu,
+                    "url": base_url,
+                }
+            )
 
         if len(avis_divs) < 20:
             break
