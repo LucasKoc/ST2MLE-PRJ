@@ -9,17 +9,7 @@ from urllib.parse import quote_plus, urldefrag, urljoin
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-
-BASE = "https://www.letudiant.fr"
-RANKING = f"{BASE}/classements/classement-des-ecoles-d-ingenieurs.html"
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
-}
-SEARCH = (
-    "https://www.letudiant.fr/etudes/"
-    "annuaire-enseignement-superieur/etablissement/"
-    "critere-{query}/page-1.html"
-)
+from config import Config
 
 
 class ScrappingLetudiant:
@@ -56,7 +46,7 @@ class ScrappingLetudiant:
         for btn in soup.find_all(
             "a", href=True, string=lambda t: t and "fiche complète" in t.lower()
         ):
-            url = urldefrag(urljoin(BASE, btn["href"])).url
+            url = urldefrag(urljoin(Config.BASE, btn["href"])).url
             name = btn.find_previous("h3").get_text(" ", strip=True)
             if "/etudes/annuaire-enseignement-superieur/etablissement/" not in url:
                 mapped = self.annuaire_url_from_name(name, session)
@@ -71,15 +61,15 @@ class ScrappingLetudiant:
         session = requests.Session()
         all_rows = []
         for page in range(1, 10):
-            url = RANKING if page == 1 else f"{RANKING}?page={page}"
-            html = requests.get(url, headers=HEADERS, timeout=10).text
+            url = Config.RANKING if page == 1 else f"{Config.RANKING}?page={page}"
+            html = requests.get(url, headers=Config.HEADERS, timeout=10).text
             page_rows = self.extract_rows(html, session)
             all_rows.extend(page_rows)
             print(f"Page {page} -> +{len(page_rows)} lignes (total {len(all_rows)})")
             time.sleep(1)
 
         print(f"Total final : {len(all_rows)} liens")
-        with open("liens_fiches_ecoles.csv", "w", newline="", encoding="utf-8") as f:
+        with open(Config.CSV_SCHOOL_URLS, "w", newline="", encoding="utf-8") as f:
             csv.writer(f).writerows([("name", "url")] + all_rows)
 
         return all_rows
@@ -97,8 +87,8 @@ class ScrappingLetudiant:
         if name in self.false_positive:
             return self.false_positive[name]
         name_clean = name.lower().split("-")[0].strip()
-        url = SEARCH.format(query=quote_plus(name_clean))
-        html = session.get(url, headers=HEADERS, timeout=10).text
+        url = Config.SEARCH.format(query=quote_plus(name_clean))
+        html = session.get(url, headers=Config.HEADERS, timeout=10).text
         soup = BeautifulSoup(html, "lxml")
 
         link = soup.find(
@@ -108,13 +98,13 @@ class ScrappingLetudiant:
             in h,
         )
         if link:
-            return urldefrag(urljoin(BASE, link["href"])).url
+            return urldefrag(urljoin(Config.BASE, link["href"])).url
         return None
 
 
 if __name__ == "__main__":
     scrapping = ScrappingLetudiant()
-    scrapping.load_false_positive("false_positive.csv")
+    scrapping.load_false_positive(Config.CSV_FALSE_POSITIVE)
     rows = scrapping.extract_ranking_page()
 
     schools = pd.DataFrame([row[1] for row in rows], columns=["url"])
