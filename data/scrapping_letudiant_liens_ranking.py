@@ -46,12 +46,16 @@ class ScrappingLetudiant:
         for btn in soup.find_all(
             "a", href=True, string=lambda t: t and "fiche complète" in t.lower()
         ):
-            url = urldefrag(urljoin(Config.BASE, btn["href"])).url
+            original_url = urldefrag(urljoin(Config.BASE, btn["href"])).url
             name = btn.find_previous("h3").get_text(" ", strip=True)
-            if "/etudes/annuaire-enseignement-superieur/etablissement/" not in url:
-                mapped = self.annuaire_url_from_name(name, session)
-                url = mapped or url
-            rows.append((name, url))
+            alt_url = None
+
+            if "/etudes/annuaire-enseignement-superieur/etablissement/" not in original_url:
+                mapped_url = self.annuaire_url_from_name(name, session)
+                if mapped_url and mapped_url != original_url:
+                    alt_url = original_url
+                    original_url = mapped_url
+            rows.append({"name": name, "url": original_url, "alt_url": alt_url or ""})
         return rows
 
     def extract_ranking_page(self) -> list[tuple[str, str]]:
@@ -70,7 +74,9 @@ class ScrappingLetudiant:
 
         print(f"Total final : {len(all_rows)} liens")
         with open(Config.CSV_SCHOOL_URLS, "w", newline="", encoding="utf-8") as f:
-            csv.writer(f).writerows([("name", "url")] + all_rows)
+            writer = csv.DictWriter(f, fieldnames=["name", "url", "alt_url"])
+            writer.writeheader()
+            writer.writerows(all_rows)
 
         return all_rows
 
@@ -106,7 +112,3 @@ if __name__ == "__main__":
     scrapping = ScrappingLetudiant()
     scrapping.load_false_positive(Config.CSV_FALSE_POSITIVE)
     rows = scrapping.extract_ranking_page()
-
-    schools = pd.DataFrame([row[1] for row in rows], columns=["url"])
-    schools["duplicated"] = schools.duplicated()
-    print(schools)

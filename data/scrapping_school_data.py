@@ -37,14 +37,17 @@ class ScrappingSchoolData:
     def load_urls(self, path: str) -> None:
         """
         Load URLs from a CSV file.
-        Format: {'name': 'url'}
+        Format: {'name': 'url', 'alt_url'}
         :param path: Path to the CSV file containing URLs.
         """
         assert path is not None, "Path must be provided."
         assert path.endswith(".csv"), "Path must be a CSV file."
 
         df = pd.read_csv(path)
-        self.urls = dict(zip(df['name'], df['url']))
+        self.urls = {
+            row["name"]: {"url": row["url"], "alt_url": row.get("alt_url", "")}
+            for _, row in df.iterrows()
+        }
         print(self.urls)
 
     def scrape_data(self):
@@ -52,54 +55,62 @@ class ScrappingSchoolData:
         Scrape data from the loaded URLs and save it into the class attribute `data`.
         """
         try:
-            for school_key, url in tqdm(
+            for school_key, sources in tqdm(
                 self.urls.items(), desc="Scraping schools", total=len(self.urls)
             ):
-                self.driver.get(url)
-                time.sleep(2)
-                soup = BeautifulSoup(self.driver.page_source, "html.parser")
+                primary_url = sources["url"]
+                fallback_url = sources.get("alt_url", "")
+                success = self.scrape_school_data(school_key, primary_url)
 
-                for thematic_id in self.thematics_ids:
-                    # Recherche des divs par suffixe dans l'id
-                    header_div = soup.find(
-                        "div", id=lambda x: x and x.endswith(f"{thematic_id}-header")
-                    )
-                    titre = (
-                        header_div.find("h2").text.strip()
-                        if header_div
-                        else f"Thématique {thematic_id}"
-                    )
-
-                    thematic_div = soup.find(
-                        "div", id=lambda x: x and x.endswith(f"{thematic_id}-criteria")
-                    )
-                    if not thematic_div:
-                        print(f"[!] Section {thematic_id} introuvable pour {school_key} | {url}")
-                        continue
-
-                    rows = thematic_div.find_all("div", class_="criterion-row")
-                    for row in rows:
-                        try:
-                            label = row.find("span", class_="tw-font-medium").get_text(strip=True)
-                            score_div = row.find("div", class_="tw-bg-ranking-green")
-                            score = score_div.get_text(strip=True) if score_div else "N/A"
-                            note_div = row.find("div", class_="tw-text-right")
-                            note = note_div.get_text(strip=True) if note_div else "N/A"
-
-                            self.data.append(
-                                {
-                                    "École": school_key,
-                                    "Thématique": titre,
-                                    "ID Thématique": thematic_id,
-                                    "Critère": label,
-                                    "Score /10": score,
-                                    "Note brute": note,
-                                }
-                            )
-                        except Exception as e:
-                            print(f"⚠️ Problème ligne ({school_key}, thématique {thematic_id}): {e}")
+                if not success and fallback_url:
+                    tqdm.write(f"Fallback tentative - {school_key}")
+                    self.scrape_school_data(school_key, fallback_url)
         finally:
             self.driver.quit()
+
+    def scrape_school_data(self, school_key: str, url: str) -> bool:
+        self.driver.get(url)
+        time.sleep(2)
+        soup = BeautifulSoup(self.driver.page_source, "html.parser")
+        success = False
+
+        for thematic_id in self.thematics_ids:
+            header_div = soup.find("div", id=lambda x: x and x.endswith(f"{thematic_id}-header"))
+            titre = (
+                header_div.find("h2").text.strip() if header_div else f"Thématique {thematic_id}"
+            )
+
+            thematic_div = soup.find(
+                "div", id=lambda x: x and x.endswith(f"{thematic_id}-criteria")
+            )
+            if not thematic_div:
+                tqdm.write(f"[!] Section {thematic_id} introuvable pour {school_key} | {url}")
+                continue
+
+            success = True  # At least one thematic section found
+
+            rows = thematic_div.find_all("div", class_="criterion-row")
+            for row in rows:
+                try:
+                    label = row.find("span", class_="tw-font-medium").get_text(strip=True)
+                    score_div = row.find("div", class_="tw-bg-ranking-green")
+                    score = score_div.get_text(strip=True) if score_div else "N/A"
+                    note_div = row.find("div", class_="tw-text-right")
+                    note = note_div.get_text(strip=True) if note_div else "N/A"
+
+                    self.data.append(
+                        {
+                            "École": school_key,
+                            "Thématique": titre,
+                            "ID Thématique": thematic_id,
+                            "Critère": label,
+                            "Score /10": score,
+                            "Note brute": note,
+                        }
+                    )
+                except Exception as e:
+                    tqdm.write(f"⚠️ Problème ligne ({school_key}, thématique {thematic_id}): {e}")
+        return success
 
     def convert_data_into_df(self) -> pd.DataFrame:
         """
