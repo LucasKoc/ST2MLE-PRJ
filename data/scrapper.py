@@ -74,6 +74,6 @@ for base_url in tqdm(ecoles, desc="Scraping schools", unit="school"):
 print(f"Total avis collectés : {len(avis_list)}")
 
 df = pd.DataFrame(avis_list)
-df.to_csv("dataset.csv", index=False, encoding='utf-8-sig')
+df.to_csv("textual_dataset.csv", index=False, encoding='utf-8-sig')
 
-print("Scraping terminé : dataset.csv créé.")
+print("Scraping terminé : textual_dataset.csv créé.")
