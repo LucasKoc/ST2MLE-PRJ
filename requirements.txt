@@ -8,6 +8,7 @@ scikit-learn~=1.6.1
 requests~=2.32.3
 bs4~=0.0.2
 beautifulsoup4~=4.13.4
+tqdm~=4.66.0
 
 # Dev dependencies
 black
