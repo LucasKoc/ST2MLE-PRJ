@@ -94,9 +94,9 @@ class ScrappingSchoolData:
                 try:
                     label = row.find("span", class_="tw-font-medium").get_text(strip=True)
                     score_div = row.find("div", class_="tw-bg-ranking-green")
-                    score = score_div.get_text(strip=True) if score_div else "N/A"
+                    score = score_div.get_text(strip=True) if score_div else None
                     note_div = row.find("div", class_="tw-text-right")
-                    note = note_div.get_text(strip=True) if note_div else "N/A"
+                    note = note_div.get_text(strip=True) if note_div else None
 
                     self.data.append(
                         {
