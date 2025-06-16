@@ -28,3 +28,9 @@ isort --check .
 black .
 isort .
 ```
+
+# Members
+- BOULLE Maxime
+- KOCOGLU Lucas
+- LÉVÊQUE Clément
+- LAHIMASY Nicolas
